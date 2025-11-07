@@ -26,7 +26,7 @@ namespace SalesTracker.Controllers
                 .AnyAsync(p => p.Id == dto.ProductId);
 
             if (!productExists)
-                return BadRequest("Invalid Product ID.");
+                return NotFound("no product found");
 
             var sale = new Sale
             {
@@ -39,7 +39,7 @@ namespace SalesTracker.Controllers
             _context.sale.Add(sale);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Sale recorded successfully" });
+            return Ok(new { message = "Sale addedd successfully" });
         }
         [HttpGet]
         public async Task<IActionResult> Getsales()
@@ -59,7 +59,7 @@ namespace SalesTracker.Controllers
                 .ToListAsync();
 
             if (!sales.Any())
-                return Ok(new { message = "No sales found for this date" });
+                return Ok(new { message = "No sales found in this date" });
 
             var report = new
             {
