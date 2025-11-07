@@ -76,13 +76,7 @@ namespace SalesTracker.Controllers
             })
             .OrderByDescending(g => g.TotalSold)
             .Take(1) ,
-            Items = sales.Select(s => new
-                {
-                    s.product.Name,
-                    s.Quantity,
-                    Price = s.product.Price,
-                    Total = s.Quantity * s.product.Price
-                })
+           
             };
 
             return Ok(report);
