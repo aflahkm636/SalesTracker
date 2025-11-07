@@ -1,0 +1,94 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SalesTracker.data;
+using SalesTracker.models;
+using SalesTracker.NewFolder;
+
+namespace SalesTracker.Controllers
+{
+    [Route("api/controller")]
+    [ApiController]
+
+    public class salesController:ControllerBase
+    {
+        private readonly AppdbContext _context;
+
+        public salesController(AppdbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpPost]
+
+        public async Task<IActionResult> CreateSale([FromBody] SaleCreateDto dto)
+        {
+            bool productExists = await _context.products
+                .AnyAsync(p => p.Id == dto.ProductId);
+
+            if (!productExists)
+                return BadRequest("Invalid Product ID.");
+
+            var sale = new Sale
+            {
+                productId = dto.ProductId,
+                Quantity = dto.Quantity,
+                date=DateTime.UtcNow
+            };
+
+
+            _context.sale.Add(sale);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Sale recorded successfully" });
+        }
+        [HttpGet]
+        public async Task<IActionResult> Getsales()
+        {
+            var sales = await _context.sale.ToListAsync();
+            return Ok(sales);
+
+        }
+      
+
+        [HttpGet("report/{date}")]
+        public async Task<IActionResult> GetReport(DateTime date)
+        {
+            var sales = await _context.sale
+                .Where(s => s.date.Date == date.Date)
+                .Include(s => s.product)
+                .ToListAsync();
+
+            if (!sales.Any())
+                return Ok(new { message = "No sales found for this date" });
+
+            var report = new
+            {
+                Date = date.ToString("yyyy-MM-dd"),
+                TotalItemsSold = sales.Sum(s => s.Quantity),
+                TotalRevenue = sales.Sum(s => s.Quantity * s.product.Price),
+                TopSelling = sales
+            .GroupBy(s => new { s.productId, s.product.Name })
+            .Select(g => new
+            {
+                ProductId = g.Key.productId,
+                ProductName = g.Key.Name,
+                TotalSold = g.Sum(x => x.Quantity)
+            })
+            .OrderByDescending(g => g.TotalSold)
+            .Take(1) ,
+            Items = sales.Select(s => new
+                {
+                    s.product.Name,
+                    s.Quantity,
+                    Price = s.product.Price,
+                    Total = s.Quantity * s.product.Price
+                })
+            };
+
+            return Ok(report);
+        }
+
+     
+
+    }
+}
