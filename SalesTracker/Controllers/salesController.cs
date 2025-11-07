@@ -54,32 +54,33 @@ namespace SalesTracker.Controllers
         public async Task<IActionResult> GetReport(DateTime date)
         {
             var sales = await _context.sale
-                .Where(s => s.date.Date == date.Date)
-                .Include(s => s.product)
-                .ToListAsync();
+      .Where(s => s.date.Date == date.Date)
+      .Include(s => s.product)
+      .ToListAsync();
 
             if (!sales.Any())
                 return Ok(new { message = "No sales found in this date" });
 
+            var topProduct = sales
+                .GroupBy(s => new { s.productId, s.product.Name })
+                .Select(g => new
+                {
+                    ProductName = g.Key.Name,
+                    TotalSold = g.Sum(x => x.Quantity)
+                })
+                .OrderByDescending(g => g.TotalSold)
+                .FirstOrDefault();
+
             var report = new
             {
-                Date = date.ToString("yyyy-MM-dd"),
-                TotalItemsSold = sales.Sum(s => s.Quantity),
-                TotalRevenue = sales.Sum(s => s.Quantity * s.product.Price),
-                TopSelling = sales
-            .GroupBy(s => new { s.productId, s.product.Name })
-            .Select(g => new
-            {
-                ProductId = g.Key.productId,
-                ProductName = g.Key.Name,
-                TotalSold = g.Sum(x => x.Quantity)
-            })
-            .OrderByDescending(g => g.TotalSold)
-            .Take(1) ,
-           
+                date = date.ToString("yyyy-MM-dd"),
+                total_sales = sales.Sum(s => s.Quantity * s.product.Price),
+                total_items_sold = sales.Sum(s => s.Quantity),
+                top_product = topProduct?.ProductName
             };
 
             return Ok(report);
+
         }
 
      
